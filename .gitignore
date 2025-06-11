@@ -62,8 +62,8 @@ Thumbs.db
 *.log
 logs/
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (but keep config.toml)
+.streamlit/secrets.toml
 
 # Database files
 *.db
