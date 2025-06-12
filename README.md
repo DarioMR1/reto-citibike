@@ -1,228 +1,197 @@
-# 🚴‍♂️ CitiBike Analytics & ML Platform
+# CitiBike Analytics & ML Platform
 
-Una plataforma integral de análisis predictivo y detección de anomalías para datos de CitiBike, que incluye simulaciones avanzadas y análisis contrafactual.
+Advanced Analytics and Machine Learning Platform for CitiBike Operations built with **FastAPI** backend and **Next.js** frontend.
 
-## 📋 Características Principales
+## 🏗️ Architecture
 
-### 🤖 Modelos de Machine Learning
+This project follows a modern, scalable architecture:
 
-- **Modelos Supervisados**: Random Forest y Gradient Boosting para predicción de ingresos
-- **Modelos No Supervisados**: Isolation Forest y Local Outlier Factor para detección de anomalías
-- **Persistencia de Modelos**: Guardado y carga automática de modelos entrenados
+- **Backend**: FastAPI (deployed on Google Cloud Run)
+- **Frontend**: Next.js (deployed on Vercel)
+- **Database**: Snowflake
+- **ML Stack**: scikit-learn, pandas, numpy
+- **Visualization**: Plotly
 
-### 🎮 Simulaciones Interactivas
-
-- **Predicción Individual**: Predice ingresos para viajes específicos
-- **Análisis por Lotes**: Evalúa múltiples escenarios simultáneamente
-- **Detección de Anomalías**: Simula identificación de patrones anómalos
-- **Análisis Contrafactual**: Estima pérdidas por eventos de desabasto
-- **Optimizador**: Encuentra condiciones óptimas para maximizar ingresos
-
-### 📊 Dashboard y Visualizaciones
-
-- **KPIs en Tiempo Real**: Métricas clave del negocio
-- **Análisis de Ingresos**: Por hora, usuario, estación y clima
-- **Balance de Estaciones**: Identificación de déficit y excesos
-- **Impacto Climático**: Relación entre clima e ingresos
-
-## 🏗️ Arquitectura Modular
-
-La aplicación está estructurada en módulos especializados:
+## 📁 Project Structure
 
 ```
 reto-citibike/
-├── app.py                    # Aplicación principal de Streamlit
-├── database.py               # Conexiones y consultas a Snowflake
-├── models.py                 # Clases de modelos ML supervisados y no supervisados
-├── visualizations.py         # Funciones de gráficos y visualizaciones
-├── simulations.py           # Motor de simulaciones y predicciones
-├── requirements.txt         # Dependencias de Python
-└── README.md               # Este archivo
+├── main.py                  # FastAPI application
+├── database.py              # Snowflake database connections
+├── models.py                # ML models (supervised & unsupervised)
+├── visualizations.py        # Plotly charts and KPIs
+├── requirements.txt         # Python dependencies
+├── Dockerfile              # Container configuration
+├── Makefile                # Deployment commands
+├── env.example             # Environment variables template
+└── README.md               # This file
+
+reto-citibike-web/
+├── app/
+│   └── page.tsx            # Next.js main dashboard
+├── components/ui/          # Reusable UI components
+├── lib/utils.ts           # Utility functions
+├── package.json           # Node.js dependencies
+└── next.config.js         # Next.js configuration
 ```
 
-## 🚀 Instalación y Uso
+## 🚀 Quick Start
 
-### 1. Preparar el Entorno
+### Backend (FastAPI)
+
+1. **Setup environment**:
 
 ```bash
-# Crear entorno virtual
-python -m venv venv
+cd reto-citibike
+cp env.example .env
+# Edit .env with your Snowflake credentials
+```
 
-# Activar entorno virtual
-# En Windows:
-venv\Scripts\activate
-# En Mac/Linux:
-source venv/bin/activate
+2. **Install dependencies**:
 
-# Instalar dependencias
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Ejecutar la Aplicación
+3. **Run locally**:
 
 ```bash
-streamlit run app.py
+python main.py
+# API will be available at http://localhost:8000
 ```
 
-### 3. Acceder a la Plataforma
+### Frontend (Next.js)
 
-Abre tu navegador y ve a `http://localhost:8501`
+1. **Setup environment**:
 
-## 📖 Guía de Uso
+```bash
+cd reto-citibike-web
+cp env.example .env.local
+# Edit .env.local with your API URL
+```
 
-### 🏠 Dashboard Principal
+2. **Install dependencies**:
 
-- **KPIs**: Visualiza métricas clave como ingresos totales, viajes y estaciones activas
-- **Análisis de Ingresos**: Explora patrones temporales y por usuario
-- **Balance de Estaciones**: Identifica estaciones con déficit o exceso de bicicletas
-- **Impacto del Clima**: Analiza cómo la temperatura afecta los ingresos
+```bash
+pnpm install
+```
 
-### 🤖 Entrenamiento de Modelos
+3. **Run locally**:
 
-#### Modelos Supervisados
+```bash
+pnpm dev
+# App will be available at http://localhost:3000
+```
 
-1. Ve a la pestaña "Entrenamiento de Modelos"
-2. Selecciona "Modelos Supervisados"
-3. Haz clic en "Entrenar Modelos Supervisados"
-4. Espera a que se complete el entrenamiento (puede tomar varios minutos)
-5. Revisa las métricas de comparación entre Random Forest y Gradient Boosting
+## 🚢 Deployment
 
-#### Modelos No Supervisados
+### Backend to Google Cloud Run
 
-1. En la misma sección, selecciona "Modelos No Supervisados"
-2. Haz clic en "Entrenar Detección de Anomalías"
-3. Analiza las anomalías detectadas por consenso
+```bash
+cd reto-citibike
+make deploy
+```
 
-### 🎮 Simulaciones y Predicciones
+### Frontend to Vercel
 
-#### Predicción Individual
+```bash
+cd reto-citibike-web
+vercel --prod
+```
 
-- Configura parámetros como estación, hora, temperatura, duración
-- Obtén predicciones instantáneas de ingresos por minutos excedentes
-- Compara con cálculos teóricos
+## 📊 Features
 
-#### Análisis por Lotes
+### Machine Learning
 
-- Selecciona qué parámetros variar (hora, temperatura, duración)
-- Ejecuta análisis masivo para encontrar mejores escenarios
-- Visualiza resultados en matrices interactivas
+- **Supervised Models**: Revenue prediction using Random Forest and Gradient Boosting
+- **Unsupervised Models**: Anomaly detection using Isolation Forest and LOF
+- **Model Management**: Save/load trained models
+- **Performance Metrics**: R², RMSE, MAE tracking
 
-#### Detección de Anomalías
+### Analytics & Predictions
 
-- Simula condiciones específicas de estación-hora
-- Evalúa si el patrón es anómalo según los modelos entrenados
-- Obtén scores de anomalía detallados
+- **Dashboard**: Real-time KPIs and visualizations
+- **Single Predictions**: Individual trip revenue forecasting
+- **Batch Analysis**: Scenario analysis across multiple parameters
+- **Anomaly Detection**: Identify unusual patterns in operations
+- **Counterfactual Analysis**: Estimate losses from shortage events
 
-#### Análisis Contrafactual
+### API Endpoints
 
-- Simula eventos de desabasto específicos
-- Compara impacto entre diferentes estaciones
-- Estima pérdidas anuales proyectadas
+- `GET /api/status` - System status
+- `GET /api/dashboard` - Dashboard data and KPIs
+- `POST /api/train/supervised` - Train revenue prediction models
+- `POST /api/train/unsupervised` - Train anomaly detection models
+- `POST /api/predict/single` - Single trip prediction
+- `POST /api/predict/anomaly` - Anomaly prediction
+- `POST /api/analyze/batch` - Batch scenario analysis
+- `GET /api/anomalies/analysis` - Anomaly analysis results
+- `GET /api/counterfactual/analysis` - Counterfactual analysis
 
-#### Optimizador
+## 🛠️ Development
 
-- Encuentra automáticamente las mejores condiciones
-- Maximiza ingresos para estaciones específicas
-- Recibe recomendaciones operativas
+### Environment Variables
 
-## 🔧 Configuración Avanzada
+Backend (`.env`):
 
-### Gestión de Modelos
+```bash
+# Google Cloud Configuration
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+SERVICE_NAME=citibike-analytics-api
 
-- **Guardar**: Los modelos se guardan automáticamente en `/models/`
-- **Cargar**: Carga modelos previamente entrenados al iniciar
-- **Estado**: Verifica el estado de entrenamiento en la barra lateral
+# Snowflake Database Configuration
+SNOWFLAKE_ACCOUNT=your_account_here
+SNOWFLAKE_USER=your_user_here
+SNOWFLAKE_PASSWORD=your_password_here
+SNOWFLAKE_DATABASE=your_database_here
+SNOWFLAKE_SCHEMA=your_schema_here
 
-### Parámetros de Conexión
+# Application Configuration
+APP_ENV=production
+DEBUG=False
+PORT=8000
+```
 
-La aplicación se conecta automáticamente a Snowflake con:
+Frontend (`.env.local`):
 
-- **Account**: WSDIINJ-SG47948
-- **Database**: RETO_CITIBIKE
-- **Schema**: PUBLIC
+```bash
+NEXT_PUBLIC_API_URL=https://your-cloud-run-url
+```
 
-### Cache de Datos
+### Make Commands
 
-- Los datos del dashboard se cachean por 1 hora para mejor rendimiento
-- Las consultas se optimizan para reducir tiempo de carga
+- `make deploy` - Deploy to Cloud Run
+- `make delete` - Remove service
+- `make logs` - View service logs
+- `make status` - Show service status
 
-## 📊 Integración con los Notebooks
+## 🔧 Technology Stack
 
-Esta aplicación integra y mejora el trabajo realizado en los notebooks:
+- **Backend**: FastAPI, uvicorn, pydantic
+- **ML/Data**: pandas, numpy, scikit-learn, plotly
+- **Database**: snowflake-connector-python
+- **Infrastructure**: Google Cloud Run, Docker
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **UI Components**: Radix UI, Lucide Icons
 
-### Desde `modelos_supervisados.ipynb`:
+## 📈 Model Performance
 
-- ✅ Feature Engineering automatizado (25 features)
-- ✅ Entrenamiento de Random Forest y Gradient Boosting
-- ✅ Evaluación con R² = 0.7939 (mejor performance)
-- ✅ Análisis contrafactual de eventos de desabasto
-- ✅ Estimación de $11,702.64 en pérdidas anuales
+The platform automatically evaluates multiple algorithms and selects the best performing model based on R² score:
 
-### Desde `modelos_no_supervisados.ipynb`:
+- **Random Forest**: Robust ensemble method
+- **Gradient Boosting**: Advanced boosting algorithm
+- **Isolation Forest**: Anomaly detection
+- **Local Outlier Factor**: Local anomaly detection
 
-- ✅ Isolation Forest y Local Outlier Factor
-- ✅ Detección de 515 anomalías de consenso
-- ✅ Análisis de $1,740.71 en pérdidas por anomalías
-- ✅ Identificación de estaciones críticas (HB102)
+## 🤝 Contributing
 
-### Mejoras Adicionales:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
 
-- 🎮 **Simulaciones Interactivas**: Capacidades "what-if" en tiempo real
-- 📊 **Dashboard Intuitivo**: Visualizaciones profesionales con Plotly
-- 🔄 **Persistencia**: Modelos se guardan y cargan automáticamente
-- ⚡ **Optimización**: Cache y consultas optimizadas
-- 🎯 **UX/UI**: Interfaz moderna y fácil de usar
+## 📄 License
 
-## 🚨 Casos de Uso Principales
-
-### 1. Análisis Operativo Diario
-
-- Monitorear KPIs en tiempo real
-- Identificar estaciones problemáticas
-- Evaluar impacto del clima
-
-### 2. Planificación Estratégica
-
-- Simular diferentes escenarios operativos
-- Optimizar redistribución de bicicletas
-- Estimar ROI de mejoras
-
-### 3. Detección Proactiva de Problemas
-
-- Identificar anomalías antes de que se conviertan en problemas
-- Predecir eventos de desabasto
-- Alertas tempranas para operaciones
-
-### 4. Análisis de Ingresos
-
-- Predecir ingresos por minutos excedentes
-- Identificar oportunidades de optimización
-- Cuantificar pérdidas por desabasto
-
-## 🤝 Soporte
-
-Para soporte técnico o preguntas sobre la plataforma:
-
-- 📧 Email: contacto@citibike-analytics.com
-- 📖 Documentación: Ver este README
-- 🐛 Problemas: Reportar en el repositorio
-
-## 📈 Métricas de Rendimiento
-
-### Modelos Supervisados:
-
-- **Gradient Boosting**: R² = 0.7939, RMSE = $12.71
-- **Random Forest**: R² = 0.7906, RMSE = $12.81
-- **Features**: 25 variables predictivas
-- **Datos**: 245,513 registros de entrenamiento
-
-### Modelos No Supervisados:
-
-- **Isolation Forest**: 10% contaminación esperada
-- **Local Outlier Factor**: 20 vecinos, consenso robusto
-- **Anomalías**: 515 detectadas por consenso (3.1%)
-- **Datos**: 16,803 combinaciones estación-hora
-
----
-
-**🚀 CitiBike Analytics Platform v1.0** - Desarrollado para análisis predictivo y detección de anomalías en datos de CitiBike
+This project is licensed under the MIT License.

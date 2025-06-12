@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import streamlit as st
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, IsolationForest
@@ -8,7 +7,7 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import joblib
 import os
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Callable, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -83,19 +82,32 @@ class SupervisedModel:
         
         return df_modelo_final
     
-    def train(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Entrena los modelos supervisados"""
-        st.info("Starting supervised model training...")
+    def train(self, df: pd.DataFrame, log_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """Entrena los modelos supervisados con optimizaciones de velocidad"""
+        if log_callback:
+            log_callback("info", "preprocessing", "🔧 Starting feature engineering...")
+        
+        # OPTIMIZACIÓN 1: Usar una muestra más pequeña para entrenamiento rápido
+        if len(df) > 50000:
+            df_sample = df.sample(n=50000, random_state=42)
+            if log_callback:
+                log_callback("info", "preprocessing", f"📊 Using sample of {len(df_sample)} records for faster training")
+        else:
+            df_sample = df
         
         # Preparar features
-        df_modelo = self.prepare_features(df)
+        df_modelo = self.prepare_features(df_sample)
+        
+        if log_callback:
+            log_callback("success", "preprocessing", "✅ Feature engineering completed")
         
         # Preparar X e y
-        if 'INGRESO_MIN_EXCEDENTE' in df.columns:
+        if 'INGRESO_MIN_EXCEDENTE' in df_sample.columns:
             X = df_modelo
-            y = df['INGRESO_MIN_EXCEDENTE']
+            y = df_sample['INGRESO_MIN_EXCEDENTE']
         else:
-            st.error("No se encontró la columna INGRESO_MIN_EXCEDENTE")
+            if log_callback:
+                log_callback("error", "preprocessing", "❌ Target column INGRESO_MIN_EXCEDENTE not found")
             return {}
         
         # Split
@@ -103,17 +115,24 @@ class SupervisedModel:
             X, y, test_size=0.2, random_state=42, stratify=(y > 0)
         )
         
+        if log_callback:
+            log_callback("info", "training", f"📊 Training set: {len(X_train)} samples")
+            log_callback("info", "training", f"📊 Test set: {len(X_test)} samples")
+        
         results = {}
         
-        # Entrenar Random Forest
-        st.info("Entrenando Random Forest...")
+        # OPTIMIZACIÓN 2: Random Forest más pequeño y rápido
+        if log_callback:
+            log_callback("info", "training", "🌲 Training optimized Random Forest...")
+        
         rf_model = RandomForestRegressor(
-            n_estimators=100,
-            max_depth=15,
-            min_samples_split=10,
-            min_samples_leaf=5,
+            n_estimators=50,  # Reducido de 100
+            max_depth=10,     # Reducido de 15
+            min_samples_split=20,  # Aumentado para menos splits
+            min_samples_leaf=10,   # Aumentado para menos hojas
             random_state=42,
-            n_jobs=-1
+            n_jobs=-1,
+            max_features='sqrt'  # Usar menos features por árbol
         )
         rf_model.fit(X_train, y_train)
         
@@ -126,14 +145,20 @@ class SupervisedModel:
         }
         results['RandomForest'] = rf_metrics
         
-        # Entrenar Gradient Boosting
-        st.info("Entrenando Gradient Boosting...")
+        if log_callback:
+            log_callback("success", "training", f"✅ Random Forest completed - R²: {rf_metrics['r2']:.4f}")
+        
+        # OPTIMIZACIÓN 3: Gradient Boosting más pequeño y rápido
+        if log_callback:
+            log_callback("info", "training", "🚀 Training optimized Gradient Boosting...")
+        
         gb_model = GradientBoostingRegressor(
-            n_estimators=150,
-            max_depth=8,
-            learning_rate=0.1,
+            n_estimators=50,   # Reducido de 150
+            max_depth=5,       # Reducido de 8
+            learning_rate=0.15, # Aumentado para convergencia más rápida
             subsample=0.8,
-            random_state=42
+            random_state=42,
+            max_features='sqrt'  # Usar menos features
         )
         gb_model.fit(X_train, y_train)
         
@@ -146,17 +171,22 @@ class SupervisedModel:
         }
         results['GradientBoosting'] = gb_metrics
         
+        if log_callback:
+            log_callback("success", "training", f"✅ Gradient Boosting completed - R²: {gb_metrics['r2']:.4f}")
+        
         # Seleccionar mejor modelo
         if rf_metrics['r2'] > gb_metrics['r2']:
             self.best_model = rf_model
             self.model_type = "Random Forest"
             self.performance_metrics = rf_metrics
+            if log_callback:
+                log_callback("success", "training", f"🏆 Best model: Random Forest (R² = {rf_metrics['r2']:.4f})")
         else:
             self.best_model = gb_model
             self.model_type = "Gradient Boosting"
             self.performance_metrics = gb_metrics
-        
-        st.success(f"Best model: {self.model_type} (R² = {self.performance_metrics['r2']:.4f})")
+            if log_callback:
+                log_callback("success", "training", f"🏆 Best model: Gradient Boosting (R² = {gb_metrics['r2']:.4f})")
         
         return results
     
@@ -229,29 +259,54 @@ class UnsupervisedModel:
         
         return X_scaled, df_clean
     
-    def train_anomaly_detection(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Entrena modelos de detección de anomalías"""
-        st.info("Starting anomaly detection...")
+    def train_anomaly_detection(self, df: pd.DataFrame, log_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """Entrena modelos de detección de anomalías optimizados"""
+        if log_callback:
+            log_callback("info", "preprocessing", "🔧 Preparing anomaly features...")
         
-        X_scaled, df_clean = self.prepare_anomaly_features(df)
+        # OPTIMIZACIÓN: Usar muestra más pequeña para entrenamiento rápido
+        if len(df) > 20000:
+            df_sample = df.sample(n=20000, random_state=42)
+            if log_callback:
+                log_callback("info", "preprocessing", f"📊 Using sample of {len(df_sample)} records for faster training")
+        else:
+            df_sample = df
         
-        # Isolation Forest
+        X_scaled, df_clean = self.prepare_anomaly_features(df_sample)
+        
+        if log_callback:
+            log_callback("success", "preprocessing", f"✅ Features prepared - {X_scaled.shape[1]} features")
+        
+        # OPTIMIZACIÓN: Isolation Forest más rápido
+        if log_callback:
+            log_callback("info", "training", "🌲 Training optimized Isolation Forest...")
+        
         self.iso_forest = IsolationForest(
             contamination=0.1,
             random_state=42,
             n_jobs=-1,
-            n_estimators=100
+            n_estimators=50,  # Reducido de 100
+            max_samples=min(1000, len(df_clean))  # Limitar muestras por árbol
         )
         anomaly_scores_iso = self.iso_forest.fit_predict(X_scaled)
         anomaly_scores_iso_proba = self.iso_forest.decision_function(X_scaled)
         
-        # Local Outlier Factor
+        if log_callback:
+            log_callback("success", "training", "✅ Isolation Forest training completed")
+        
+        # OPTIMIZACIÓN: LOF más rápido
+        if log_callback:
+            log_callback("info", "training", "🔍 Training optimized Local Outlier Factor...")
+        
         self.lof = LocalOutlierFactor(
-            n_neighbors=20,
+            n_neighbors=min(20, len(df_clean) // 10),  # Adaptar vecinos al tamaño
             contamination=0.1,
             n_jobs=-1
         )
         anomaly_scores_lof = self.lof.fit_predict(X_scaled)
+        
+        if log_callback:
+            log_callback("success", "training", "✅ Local Outlier Factor training completed")
         
         # Agregar resultados al DataFrame
         df_clean = df_clean.copy()
@@ -273,7 +328,10 @@ class UnsupervisedModel:
             'num_consenso': len(anomalias_consenso)
         }
         
-        st.success(f"Anomalies detected: {len(anomalias_consenso)} consensus from {len(df_clean)} records")
+        if log_callback:
+            log_callback("success", "evaluation", f"🔍 Isolation Forest anomalies: {self.anomalies_data['num_anomalias_iso']}")
+            log_callback("success", "evaluation", f"🔍 LOF anomalies: {self.anomalies_data['num_anomalias_lof']}")
+            log_callback("success", "evaluation", f"🎯 Consensus anomalies: {self.anomalies_data['num_consenso']}")
         
         return self.anomalies_data
     

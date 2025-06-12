@@ -1,6 +1,5 @@
 import snowflake.connector
 import pandas as pd
-import streamlit as st
 import os
 from dotenv import load_dotenv
 from typing import Optional
@@ -24,28 +23,63 @@ class SnowflakeConnection:
     def ejecutar_consulta_df(self, sql_query: str) -> pd.DataFrame:
         """Ejecuta una consulta SQL y retorna un DataFrame"""
         conn = None
+        cursor = None
         try:
+            print(f"🔄 Connecting to Snowflake...")
             conn = snowflake.connector.connect(
                 account=self.account,
                 user=self.user,
                 password=self.password,
                 database=self.database,
-                schema=self.schema
+                schema=self.schema,
+                insecure_mode=False,
+                ocsp_fail_open=True
             )
+            print(f"✅ Connected to Snowflake successfully")
+            
             cursor = conn.cursor()
+            print(f"🔄 Executing query...")
             cursor.execute(sql_query)
-            results = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
-            return results
-        except snowflake.connector.errors.Error as e:
-            st.error(f"❌ Error al ejecutar la consulta en Snowflake: {e}")
+            
+            print(f"🔄 Fetching results...")
+            results = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            df = pd.DataFrame(results, columns=columns)
+            
+            print(f"✅ Query executed successfully. Retrieved {len(df)} rows")
+            return df
+            
+        except snowflake.connector.errors.ProgrammingError as pe:
+            print(f"❌ Snowflake Programming Error: {str(pe)}")
+            print(f"❌ SQL Query: {sql_query[:200]}...")
+            return pd.DataFrame()
+        except snowflake.connector.errors.DatabaseError as de:
+            print(f"❌ Snowflake Database Error: {str(de)}")
+            return pd.DataFrame()
+        except snowflake.connector.errors.Error as se:
+            print(f"❌ Snowflake Error: {str(se)}")
             return pd.DataFrame()
         except Exception as e:
-            st.error(f"❌ Unexpected error: {e}")
+            print(f"❌ Unexpected error: {str(e)}")
+            print(f"❌ Error type: {type(e).__name__}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
             return pd.DataFrame()
         finally:
+            # Safely close cursor and connection
+            if cursor:
+                try:
+                    cursor.close()
+                    print("🔄 Cursor closed")
+                except Exception as e:
+                    print(f"⚠️ Error closing cursor: {str(e)}")
+            
             if conn:
-                cursor.close()
-                conn.close()
+                try:
+                    conn.close()
+                    print("🔄 Connection closed")
+                except Exception as e:
+                    print(f"⚠️ Error closing connection: {str(e)}")
 
 # Instancia global
 try:
@@ -58,7 +92,7 @@ except ValueError as e:
 def get_training_data():
     """Obtiene datos de entrenamiento para modelos supervisados"""
     if db is None:
-        st.error("❌ Database connection not available")
+        print("❌ Database connection not available")
         return pd.DataFrame()
         
     consulta = """
@@ -110,7 +144,7 @@ def get_training_data():
 def get_anomaly_data():
     """Obtiene datos para detección de anomalías"""
     if db is None:
-        st.error("❌ Database connection not available")
+        print("❌ Database connection not available")
         return pd.DataFrame()
         
     consulta = """
@@ -160,7 +194,7 @@ def get_anomaly_data():
 def get_desabasto_events():
     """Obtiene eventos de desabasto para análisis contrafactual"""
     if db is None:
-        st.error("❌ Database connection not available")
+        print("❌ Database connection not available")
         return pd.DataFrame()
         
     consulta = """
@@ -210,7 +244,7 @@ def get_desabasto_events():
 def get_dashboard_data():
     """Obtiene datos principales para el dashboard"""
     if db is None:
-        st.error("❌ Database connection not available")
+        print("❌ Database connection not available")
         return pd.DataFrame()
         
     consulta = """

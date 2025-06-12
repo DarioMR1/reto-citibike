@@ -3,7 +3,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
-import streamlit as st
 
 def plot_model_comparison(results: dict):
     """Gráfico de comparación de modelos"""
@@ -257,7 +256,7 @@ def plot_weather_impact(df):
                 
                 return fig
         except Exception as e:
-            st.warning(f"⚠️ Error al crear gráfico de clima: {str(e)}")
+            print(f"⚠️ Error al crear gráfico de clima: {str(e)}")
     
     return None
 
@@ -291,41 +290,19 @@ def create_kpi_metrics(df, anomalies_data=None, counterfactual_loss=None):
     kpis = {}
     
     if len(df) > 0:
-        kpis['total_viajes'] = len(df)
-        kpis['ingresos_totales'] = df['INGRESO_MIN_EXCEDENTE'].sum()
-        kpis['ingreso_promedio'] = df['INGRESO_MIN_EXCEDENTE'].mean()
-        kpis['estaciones_activas'] = df['START_STATION_ID'].nunique() if 'START_STATION_ID' in df.columns else 0
+        kpis['total_viajes'] = int(len(df))
+        kpis['ingresos_totales'] = float(df['INGRESO_MIN_EXCEDENTE'].sum())
+        kpis['ingreso_promedio'] = float(df['INGRESO_MIN_EXCEDENTE'].mean())
+        kpis['estaciones_activas'] = int(df['START_STATION_ID'].nunique()) if 'START_STATION_ID' in df.columns else 0
         
         # Porcentaje de viajes con ingresos
-        kpis['viajes_con_ingresos'] = (df['INGRESO_MIN_EXCEDENTE'] > 0).mean() * 100
+        kpis['viajes_con_ingresos'] = float((df['INGRESO_MIN_EXCEDENTE'] > 0).mean() * 100)
     
     if anomalies_data:
-        kpis['anomalias_detectadas'] = anomalies_data['num_consenso']
-        kpis['porcentaje_anomalias'] = (anomalies_data['num_consenso'] / len(anomalies_data['df_clean'])) * 100
+        kpis['anomalias_detectadas'] = int(anomalies_data['num_consenso'])
+        kpis['porcentaje_anomalias'] = float((anomalies_data['num_consenso'] / len(anomalies_data['df_clean'])) * 100)
     
     if counterfactual_loss:
-        kpis['perdidas_estimadas'] = counterfactual_loss
+        kpis['perdidas_estimadas'] = float(counterfactual_loss)
     
-    return kpis
-
-def display_kpi_row(kpis):
-    """Muestra KPIs en una fila de métricas"""
-    cols = st.columns(len(kpis))
-    
-    for i, (key, value) in enumerate(kpis.items()):
-        with cols[i]:
-            if 'ingreso' in key.lower() or 'perdida' in key.lower():
-                st.metric(
-                    label=key.replace('_', ' ').title(),
-                    value=f"${value:,.2f}"
-                )
-            elif 'porcentaje' in key.lower():
-                st.metric(
-                    label=key.replace('_', ' ').title(),
-                    value=f"{value:.1f}%"
-                )
-            else:
-                st.metric(
-                    label=key.replace('_', ' ').title(),
-                    value=f"{value:,}"
-                ) 
+    return kpis 
