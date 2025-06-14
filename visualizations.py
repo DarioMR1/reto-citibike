@@ -256,7 +256,7 @@ def plot_weather_impact(df):
                 
                 return fig
         except Exception as e:
-            print(f"⚠️ Error al crear gráfico de clima: {str(e)}")
+            print(f" Error al crear gráfico de clima: {str(e)}")
     
     return None
 

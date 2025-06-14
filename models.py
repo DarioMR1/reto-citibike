@@ -12,6 +12,16 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class SupervisedModel:
+    """
+    Clase para manejo de modelos supervisados de predicción de ingresos.
+    
+    Propósito: Encapsular toda la lógica de entrenamiento, validación y predicción
+    de modelos supervisados para facilitar el mantenimiento y reutilización.
+    
+    Decisión de diseño: Se mantiene estado del mejor modelo entrenado y sus 
+    componentes (encoders, features) para permitir predicciones consistentes.
+    """
+    
     def __init__(self):
         self.best_model = None
         self.le_station = None
@@ -20,7 +30,15 @@ class SupervisedModel:
         self.performance_metrics = {}
         
     def prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Prepara las features para el modelo supervisado"""
+        """
+        Prepara las features para el modelo supervisado.
+        
+        Propósito: Transformar datos crudos en features numéricas apropiadas para ML.
+        Incluye encoding categórico, features temporales y climáticas.
+        
+        Decisión: Se crean features cíclicas para hora (sin/cos) para capturar
+        la naturaleza cíclica del tiempo y evitar discontinuidades artificiales.
+        """
         df_modelo = df.copy()
         
         # 1. ENCODING DE VARIABLES CATEGÓRICAS
@@ -91,7 +109,7 @@ class SupervisedModel:
         if len(df) > 50000:
             df_sample = df.sample(n=50000, random_state=42)
             if log_callback:
-                log_callback("info", "preprocessing", f"📊 Using sample of {len(df_sample)} records for faster training")
+                log_callback("info", "preprocessing", f" Using sample of {len(df_sample)} records for faster training")
         else:
             df_sample = df
         
@@ -99,7 +117,7 @@ class SupervisedModel:
         df_modelo = self.prepare_features(df_sample)
         
         if log_callback:
-            log_callback("success", "preprocessing", "✅ Feature engineering completed")
+            log_callback("success", "preprocessing", " Feature engineering completed")
         
         # Preparar X e y
         if 'INGRESO_MIN_EXCEDENTE' in df_sample.columns:
@@ -107,7 +125,7 @@ class SupervisedModel:
             y = df_sample['INGRESO_MIN_EXCEDENTE']
         else:
             if log_callback:
-                log_callback("error", "preprocessing", "❌ Target column INGRESO_MIN_EXCEDENTE not found")
+                log_callback("error", "preprocessing", " Target column INGRESO_MIN_EXCEDENTE not found")
             return {}
         
         # Split
@@ -116,14 +134,14 @@ class SupervisedModel:
         )
         
         if log_callback:
-            log_callback("info", "training", f"📊 Training set: {len(X_train)} samples")
-            log_callback("info", "training", f"📊 Test set: {len(X_test)} samples")
+            log_callback("info", "training", f" Training set: {len(X_train)} samples")
+            log_callback("info", "training", f" Test set: {len(X_test)} samples")
         
         results = {}
         
         # OPTIMIZACIÓN 2: Random Forest más pequeño y rápido
         if log_callback:
-            log_callback("info", "training", "🌲 Training optimized Random Forest...")
+            log_callback("info", "training", " Training optimized Random Forest...")
         
         rf_model = RandomForestRegressor(
             n_estimators=50,  # Reducido de 100
@@ -146,11 +164,11 @@ class SupervisedModel:
         results['RandomForest'] = rf_metrics
         
         if log_callback:
-            log_callback("success", "training", f"✅ Random Forest completed - R²: {rf_metrics['r2']:.4f}")
+            log_callback("success", "training", f" Random Forest completed - R²: {rf_metrics['r2']:.4f}")
         
         # OPTIMIZACIÓN 3: Gradient Boosting más pequeño y rápido
         if log_callback:
-            log_callback("info", "training", "🚀 Training optimized Gradient Boosting...")
+            log_callback("info", "training", " Training optimized Gradient Boosting...")
         
         gb_model = GradientBoostingRegressor(
             n_estimators=50,   # Reducido de 150
@@ -172,7 +190,7 @@ class SupervisedModel:
         results['GradientBoosting'] = gb_metrics
         
         if log_callback:
-            log_callback("success", "training", f"✅ Gradient Boosting completed - R²: {gb_metrics['r2']:.4f}")
+            log_callback("success", "training", f" Gradient Boosting completed - R²: {gb_metrics['r2']:.4f}")
         
         # Seleccionar mejor modelo
         if rf_metrics['r2'] > gb_metrics['r2']:
@@ -180,13 +198,13 @@ class SupervisedModel:
             self.model_type = "Random Forest"
             self.performance_metrics = rf_metrics
             if log_callback:
-                log_callback("success", "training", f"🏆 Best model: Random Forest (R² = {rf_metrics['r2']:.4f})")
+                log_callback("success", "training", f" Best model: Random Forest (R² = {rf_metrics['r2']:.4f})")
         else:
             self.best_model = gb_model
             self.model_type = "Gradient Boosting"
             self.performance_metrics = gb_metrics
             if log_callback:
-                log_callback("success", "training", f"🏆 Best model: Gradient Boosting (R² = {gb_metrics['r2']:.4f})")
+                log_callback("success", "training", f" Best model: Gradient Boosting (R² = {gb_metrics['r2']:.4f})")
         
         return results
     
@@ -268,18 +286,18 @@ class UnsupervisedModel:
         if len(df) > 20000:
             df_sample = df.sample(n=20000, random_state=42)
             if log_callback:
-                log_callback("info", "preprocessing", f"📊 Using sample of {len(df_sample)} records for faster training")
+                log_callback("info", "preprocessing", f" Using sample of {len(df_sample)} records for faster training")
         else:
             df_sample = df
         
         X_scaled, df_clean = self.prepare_anomaly_features(df_sample)
         
         if log_callback:
-            log_callback("success", "preprocessing", f"✅ Features prepared - {X_scaled.shape[1]} features")
+            log_callback("success", "preprocessing", f" Features prepared - {X_scaled.shape[1]} features")
         
         # OPTIMIZACIÓN: Isolation Forest más rápido
         if log_callback:
-            log_callback("info", "training", "🌲 Training optimized Isolation Forest...")
+            log_callback("info", "training", " Training optimized Isolation Forest...")
         
         self.iso_forest = IsolationForest(
             contamination=0.1,
@@ -292,7 +310,7 @@ class UnsupervisedModel:
         anomaly_scores_iso_proba = self.iso_forest.decision_function(X_scaled)
         
         if log_callback:
-            log_callback("success", "training", "✅ Isolation Forest training completed")
+            log_callback("success", "training", " Isolation Forest training completed")
         
         # OPTIMIZACIÓN: LOF más rápido
         if log_callback:
@@ -306,7 +324,7 @@ class UnsupervisedModel:
         anomaly_scores_lof = self.lof.fit_predict(X_scaled)
         
         if log_callback:
-            log_callback("success", "training", "✅ Local Outlier Factor training completed")
+            log_callback("success", "training", " Local Outlier Factor training completed")
         
         # Agregar resultados al DataFrame
         df_clean = df_clean.copy()
@@ -331,7 +349,7 @@ class UnsupervisedModel:
         if log_callback:
             log_callback("success", "evaluation", f"🔍 Isolation Forest anomalies: {self.anomalies_data['num_anomalias_iso']}")
             log_callback("success", "evaluation", f"🔍 LOF anomalies: {self.anomalies_data['num_anomalias_lof']}")
-            log_callback("success", "evaluation", f"🎯 Consensus anomalies: {self.anomalies_data['num_consenso']}")
+            log_callback("success", "evaluation", f" Consensus anomalies: {self.anomalies_data['num_consenso']}")
         
         return self.anomalies_data
     
@@ -388,7 +406,7 @@ def save_models():
                 'performance_metrics': supervised_model.performance_metrics
             }
             joblib.dump(supervised_data, f"{models_dir}/supervised_model.pkl")
-            print("✅ Supervised model saved successfully")
+            print(" Supervised model saved successfully")
         
         if unsupervised_model.iso_forest is not None:
             # Guardar solo los componentes necesarios del modelo no supervisado
@@ -400,11 +418,11 @@ def save_models():
                 'anomalies_data': unsupervised_model.anomalies_data
             }
             joblib.dump(unsupervised_data, f"{models_dir}/unsupervised_model.pkl")
-            print("✅ Unsupervised model saved successfully")
+            print(" Unsupervised model saved successfully")
         
         return True
     except Exception as e:
-        print(f"❌ Error saving models: {e}")
+        print(f" Error saving models: {e}")
         return False
 
 def load_models():
@@ -421,7 +439,7 @@ def load_models():
             supervised_model.features_cols = supervised_data['features_cols']
             supervised_model.model_type = supervised_data['model_type']
             supervised_model.performance_metrics = supervised_data['performance_metrics']
-            print("✅ Supervised model loaded successfully")
+            print(" Supervised model loaded successfully")
             loaded_count += 1
         
         if os.path.exists(f"{models_dir}/unsupervised_model.pkl"):
@@ -432,13 +450,13 @@ def load_models():
             unsupervised_model.scaler = unsupervised_data['scaler']
             unsupervised_model.features_cols = unsupervised_data['features_cols']
             unsupervised_model.anomalies_data = unsupervised_data['anomalies_data']
-            print("✅ Unsupervised model loaded successfully")
+            print(" Unsupervised model loaded successfully")
             loaded_count += 1
         
         if loaded_count == 0:
-            print("ℹ️ No saved models found")
+            print(" No saved models found")
             
         return loaded_count > 0
     except Exception as e:
-        print(f"❌ Error loading models: {e}")
+        print(f" Error loading models: {e}")
         return False 

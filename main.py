@@ -15,11 +15,14 @@ import asyncio
 import logging
 import sys
 
-# Configure logging
+# Configuración de logging para monitoreo de la aplicación
+# Decisión: Usar logging estándar de Python para facilitar debugging y monitoreo en producción
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global training logs storage
+# Almacenamiento global de logs de entrenamiento
+# Propósito: Permitir seguimiento en tiempo real del progreso de entrenamiento de modelos
+# Decisión: Variables globales para simplicidad, ya que es una aplicación single-instance
 training_logs = []
 training_status = {
     "is_training": False,
@@ -28,7 +31,15 @@ training_status = {
 }
 
 def add_training_log(level: str, stage: str, message: str, details: Any = None):
-    """Add a training log entry"""
+    """
+    Añade una entrada al log de entrenamiento.
+    
+    Propósito: Proporcionar visibilidad en tiempo real del progreso del entrenamiento
+    para mejorar la experiencia del usuario y facilitar debugging.
+    
+    Decisión: Usar un formato estructurado con timestamps e IDs únicos para
+    permitir filtrado y ordenamiento en el frontend.
+    """
     global training_logs
     log_entry = {
         "id": f"{datetime.now().timestamp()}-{len(training_logs)}",
@@ -43,12 +54,17 @@ def add_training_log(level: str, stage: str, message: str, details: Any = None):
     return log_entry
 
 def clear_training_logs():
-    """Clear training logs"""
+    """Limpia los logs de entrenamiento."""
     global training_logs
     training_logs = []
 
 def convert_numpy_types(obj):
-    """Convert numpy types to native Python types for JSON serialization"""
+    """
+    Convierte tipos de NumPy a tipos nativos de Python para serialización JSON.
+    
+    Propósito: Evitar errores de serialización al enviar datos con tipos NumPy al frontend.
+    Decisión: Función recursiva que maneja todos los tipos comunes de NumPy y estructuras anidadas.
+    """
     if isinstance(obj, np.integer):
         return int(obj)
     elif isinstance(obj, np.floating):
@@ -62,7 +78,8 @@ def convert_numpy_types(obj):
     else:
         return obj
 
-# Import custom modules
+# Importar módulos personalizados
+# Decisión: Separar la lógica en módulos especializados para mejor mantenibilidad
 from database import (
     get_training_data, get_anomaly_data, get_desabasto_events, 
     get_dashboard_data
@@ -77,22 +94,28 @@ from visualizations import (
     plot_weather_impact, plot_counterfactual_analysis, create_kpi_metrics
 )
 
+# Configuración de la aplicación FastAPI
+# Decisión: Usar FastAPI por su excelente soporte para APIs async, documentación automática
+# y validación de tipos con Pydantic
 app = FastAPI(
     title="CitiBike Analytics API",
     description="Advanced Analytics and Machine Learning API for CitiBike Operations",
     version="1.0.0"
 )
 
-# CORS configuration
+# Configuración CORS para permitir requests desde el frontend
+# Decisión: Configuración permisiva para desarrollo, en producción se debe especificar el dominio exacto
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your domain
+    allow_origins=["*"],  # En producción, especificar el dominio exacto
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Pydantic models for request/response
+# Modelos Pydantic para validación de request/response
+# Propósito: Asegurar que los datos de entrada cumplan con el formato esperado
+# Decisión: Usar Pydantic para validación automática de tipos y documentación de API
 class PredictionRequest(BaseModel):
     station_id: str
     hour: int
@@ -135,7 +158,9 @@ class DatasetRequest(BaseModel):
     sort_by: str = "START_STATION_ID"
     sort_order: str = "asc"
 
-# Global state
+# Estado global de la aplicación
+# Propósito: Mantener el estado de los modelos y datos cacheados para evitar recalcular
+# Decisión: Diccionario simple para el estado, fácil de mantener y acceder
 app_state = {
     "models_loaded": False,
     "dashboard_data": None,
@@ -144,15 +169,20 @@ app_state = {
 
 @app.on_event("startup")
 async def startup_event():
-    """Load models on startup if available"""
+    """
+    Carga modelos al iniciar la aplicación si están disponibles.
+    
+    Propósito: Permitir que la API esté lista para hacer predicciones inmediatamente
+    después del startup sin necesidad de reentrenar.
+    """
     try:
         if load_models():
             app_state["models_loaded"] = True
-            print("✅ Models loaded successfully on startup")
+            print("Modelos cargados exitosamente al iniciar")
         else:
-            print("ℹ️ No saved models found on startup")
+            print("No se encontraron modelos guardados al iniciar")
     except Exception as e:
-        print(f"❌ Error loading models on startup: {e}")
+        print(f"Error cargando modelos al iniciar: {e}")
 
 @app.get("/")
 async def root():
@@ -483,7 +513,15 @@ async def get_anomalies_scatter():
 
 @app.post("/api/train/supervised")
 async def train_supervised_model(background_tasks: BackgroundTasks):
-    """Train supervised models"""
+    """
+    Entrena modelos supervisados para predicción de ingresos.
+    
+    Propósito: Construir modelos de machine learning que puedan predecir ingresos
+    por minutos excedentes basándose en variables como estación, hora, clima, etc.
+    
+    Decisión de diseño: Se entrenan múltiples modelos (RandomForest, GradientBoosting)
+    y se selecciona automáticamente el mejor basado en métricas de rendimiento.
+    """
     try:
         # Clear previous logs and set training status
         clear_training_logs()
@@ -492,36 +530,36 @@ async def train_supervised_model(background_tasks: BackgroundTasks):
         training_status["progress"] = 0
         app_state["training_status"] = "initializing"
         
-        add_training_log("info", "initializing", "🚀 Starting supervised model training...")
-        add_training_log("info", "initializing", "📋 Validating input parameters...")
-        add_training_log("info", "initializing", "🔧 Setting up model configurations...")
+        add_training_log("info", "initializing", "Starting supervised model training...")
+        add_training_log("info", "initializing", "Validating input parameters...")
+        add_training_log("info", "initializing", "Setting up model configurations...")
         
         training_status["current_stage"] = "loading_data"
         training_status["progress"] = 20
         app_state["training_status"] = "loading_data"
         
-        add_training_log("info", "loading_data", "📊 Connecting to Snowflake database...")
+        add_training_log("info", "loading_data", "Connecting to Snowflake database...")
         df_training = get_training_data()
         if df_training.empty:
-            add_training_log("error", "loading_data", "❌ Could not load training data")
+            add_training_log("error", "loading_data", "Could not load training data")
             training_status["is_training"] = False
             raise HTTPException(status_code=500, detail="Could not load training data")
         
-        add_training_log("success", "loading_data", f"✅ Data loaded successfully - {len(df_training)} records")
+        add_training_log("success", "loading_data", f"Data loaded successfully - {len(df_training)} records")
         
         training_status["current_stage"] = "preprocessing"
         training_status["progress"] = 40
         
-        add_training_log("info", "preprocessing", "🔧 Encoding categorical variables...")
-        add_training_log("info", "preprocessing", "📐 Creating temporal features...")
-        add_training_log("info", "preprocessing", "🌡️ Processing weather features...")
+        add_training_log("info", "preprocessing", "Encoding categorical variables...")
+        add_training_log("info", "preprocessing", "Creating temporal features...")
+        add_training_log("info", "preprocessing", "Processing weather features...")
         
         training_status["current_stage"] = "training"
         training_status["progress"] = 60
         app_state["training_status"] = "training"
         
-        add_training_log("info", "training", "🌲 Training Random Forest model...")
-        add_training_log("info", "training", "🚀 Training Gradient Boosting model...")
+        add_training_log("info", "training", "Training Random Forest model...")
+        add_training_log("info", "training", "Training Gradient Boosting model...")
         
         # Train models with logging
         results = supervised_model.train(df_training, log_callback=add_training_log)
@@ -529,9 +567,9 @@ async def train_supervised_model(background_tasks: BackgroundTasks):
         training_status["current_stage"] = "evaluation"
         training_status["progress"] = 80
         
-        add_training_log("info", "evaluation", "📊 Computing performance metrics...")
-        add_training_log("info", "evaluation", "📈 Calculating R² score...")
-        add_training_log("info", "evaluation", "💾 Saving model artifacts...")
+        add_training_log("info", "evaluation", "Computing performance metrics...")
+        add_training_log("info", "evaluation", "Calculating R² score...")
+        add_training_log("info", "evaluation", "Saving model artifacts...")
         
         if results:
             training_status["current_stage"] = "completed"
@@ -539,11 +577,11 @@ async def train_supervised_model(background_tasks: BackgroundTasks):
             training_status["is_training"] = False
             app_state["training_status"] = "completed"
             
-            add_training_log("success", "evaluation", f"✅ Model training completed - Best model: {supervised_model.model_type}")
-            add_training_log("success", "evaluation", f"📈 R² Score: {supervised_model.performance_metrics.get('r2', 0):.4f}")
+            add_training_log("success", "evaluation", f"Model training completed - Best model: {supervised_model.model_type}")
+            add_training_log("success", "evaluation", f"R² Score: {supervised_model.performance_metrics.get('r2', 0):.4f}")
             
             save_models()  # Save models after training
-            add_training_log("success", "evaluation", "💾 Models saved successfully")
+            add_training_log("success", "evaluation", "Models saved successfully")
             
             return {
                 "success": True,
@@ -555,18 +593,26 @@ async def train_supervised_model(background_tasks: BackgroundTasks):
         else:
             training_status["is_training"] = False
             app_state["training_status"] = "failed"
-            add_training_log("error", "training", "❌ Training failed")
+            add_training_log("error", "training", "Training failed")
             raise HTTPException(status_code=500, detail="Training failed")
             
     except Exception as e:
         training_status["is_training"] = False
         app_state["training_status"] = "failed"
-        add_training_log("error", "training", f"❌ Training error: {str(e)}")
+        add_training_log("error", "training", f"Training error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Training error: {str(e)}")
 
 @app.post("/api/train/unsupervised")
 async def train_unsupervised_model():
-    """Train unsupervised models for anomaly detection"""
+    """
+    Entrena modelos no supervisados para detección de anomalías.
+    
+    Propósito: Identificar patrones anómalos en el comportamiento de estaciones
+    que podrían indicar problemas operacionales o oportunidades de optimización.
+    
+    Decisión: Se usan dos algoritmos (IsolationForest y LOF) para crear un
+    consenso más robusto en la detección de anomalías.
+    """
     try:
         # Clear previous logs and set training status
         clear_training_logs()
@@ -574,44 +620,44 @@ async def train_unsupervised_model():
         training_status["current_stage"] = "initializing"
         training_status["progress"] = 0
         
-        add_training_log("info", "initializing", "🚀 Starting unsupervised model training...")
-        add_training_log("info", "initializing", "🔍 Preparing anomaly detection pipeline...")
+        add_training_log("info", "initializing", "Starting unsupervised model training...")
+        add_training_log("info", "initializing", "Preparing anomaly detection pipeline...")
         
         training_status["current_stage"] = "loading_data"
         training_status["progress"] = 25
         
-        add_training_log("info", "loading_data", "📊 Loading anomaly detection dataset...")
+        add_training_log("info", "loading_data", "Loading anomaly detection dataset...")
         df_anomalies = get_anomaly_data()
         if df_anomalies.empty:
-            add_training_log("error", "loading_data", "❌ Could not load anomaly data")
+            add_training_log("error", "loading_data", "Could not load anomaly data")
             training_status["is_training"] = False
             raise HTTPException(status_code=500, detail="Could not load anomaly data")
         
-        add_training_log("success", "loading_data", f"✅ Anomaly data loaded - {len(df_anomalies)} records")
+        add_training_log("success", "loading_data", f"Anomaly data loaded - {len(df_anomalies)} records")
         
         training_status["current_stage"] = "training"
         training_status["progress"] = 50
         
-        add_training_log("info", "training", "🌲 Training Isolation Forest model...")
-        add_training_log("info", "training", "🔍 Training Local Outlier Factor model...")
+        add_training_log("info", "training", "Training Isolation Forest model...")
+        add_training_log("info", "training", "Training Local Outlier Factor model...")
         
         anomaly_results = unsupervised_model.train_anomaly_detection(df_anomalies, log_callback=add_training_log)
         
         training_status["current_stage"] = "evaluation"
         training_status["progress"] = 80
         
-        add_training_log("info", "evaluation", "📊 Analyzing anomaly detection results...")
+        add_training_log("info", "evaluation", "Analyzing anomaly detection results...")
         
         if anomaly_results:
             training_status["current_stage"] = "completed"
             training_status["progress"] = 100
             training_status["is_training"] = False
             
-            add_training_log("success", "evaluation", f"✅ Anomaly detection completed")
-            add_training_log("success", "evaluation", f"🔍 Found {anomaly_results['num_consenso']} consensus anomalies")
+            add_training_log("success", "evaluation", f"Anomaly detection completed")
+            add_training_log("success", "evaluation", f"Found {anomaly_results['num_consenso']} consensus anomalies")
             
             save_models()
-            add_training_log("success", "evaluation", "💾 Models saved successfully")
+            add_training_log("success", "evaluation", "Models saved successfully")
             
             return {
                 "success": True,
@@ -625,12 +671,12 @@ async def train_unsupervised_model():
             }
         else:
             training_status["is_training"] = False
-            add_training_log("error", "training", "❌ Anomaly detection training failed")
+            add_training_log("error", "training", "Anomaly detection training failed")
             raise HTTPException(status_code=500, detail="Anomaly detection training failed")
             
     except Exception as e:
         training_status["is_training"] = False
-        add_training_log("error", "training", f"❌ Anomaly training error: {str(e)}")
+        add_training_log("error", "training", f"Anomaly training error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Anomaly training error: {str(e)}")
 
 @app.post("/api/predict/single")
@@ -782,17 +828,25 @@ async def get_anomaly_analysis():
 
 @app.get("/api/counterfactual/analysis")
 async def get_counterfactual_analysis():
-    """Perform counterfactual analysis with progress tracking"""
+    """
+    Realiza análisis contrafactual para estimar pérdidas por desabasto.
+    
+    Propósito: Cuantificar el impacto económico de eventos de escasez de bicicletas
+    usando modelos entrenados para simular los ingresos que se habrían generado.
+    
+    Decisión: Se usa sampling estadístico para hacer el análisis escalable sin
+    comprometer la precisión de las estimaciones.
+    """
     try:
         if supervised_model.best_model is None:
             raise HTTPException(status_code=400, detail="Supervised model not trained")
         
-        print("🔄 Starting counterfactual analysis...")
+        print("Starting counterfactual analysis...")
         df_desabasto = get_desabasto_events()
         if df_desabasto.empty:
             return {"success": True, "message": "No shortage events found", "total_loss": 0}
         
-        print(f"📊 Found {len(df_desabasto)} shortage events to analyze")
+        print(f"Found {len(df_desabasto)} shortage events to analyze")
         
         # Simulate lost revenue with progress tracking
         total_ingresos_perdidos = 0
@@ -804,7 +858,7 @@ async def get_counterfactual_analysis():
         sample_size = min(20, len(df_desabasto))  # Limit to 20 events for faster processing
         df_sample = df_desabasto.sample(n=sample_size, random_state=42)
         
-        print(f"🎯 Processing {sample_size} sample events for analysis")
+        print(f"Processing {sample_size} sample events for analysis")
         
         for idx, (_, evento) in enumerate(df_sample.iterrows()):
             viajes_perdidos = int(evento['VIAJES_PERDIDOS_ESTIMADOS'])
@@ -832,7 +886,7 @@ async def get_counterfactual_analysis():
             
             eventos_procesados += 1
             progress = (eventos_procesados / sample_size) * 100
-            print(f"📈 Progress: {progress:.1f}% ({eventos_procesados}/{sample_size} events)")
+            print(f"Progress: {progress:.1f}% ({eventos_procesados}/{sample_size} events)")
         
         # Scale up results to represent full dataset
         scaling_factor = total_eventos / sample_size if sample_size > 0 else 1
@@ -852,7 +906,7 @@ async def get_counterfactual_analysis():
         # Get top shortage events by impact
         df_desabasto_sorted = df_desabasto.nlargest(10, 'VIAJES_PERDIDOS_ESTIMADOS')
         
-        print(f"✅ Counterfactual analysis completed - Total loss: ${total_ingresos_perdidos_scaled:,.2f}")
+        print(f"Counterfactual analysis completed - Total loss: ${total_ingresos_perdidos_scaled:,.2f}")
         
         return {
             "success": True,
@@ -866,7 +920,7 @@ async def get_counterfactual_analysis():
             }
         }
     except Exception as e:
-        print(f"❌ Counterfactual analysis error: {str(e)}")
+        print(f"Counterfactual analysis error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Counterfactual analysis error: {str(e)}")
 
 @app.post("/api/models/load")
