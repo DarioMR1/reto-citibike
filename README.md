@@ -2,7 +2,11 @@
 
 Advanced Analytics and Machine Learning Platform for CitiBike Operations built with **FastAPI** backend and **Next.js** frontend.
 
-## 🏗️ Architecture
+## Desarrollador
+
+**Darío Mariscal Rocha** - Equipo 5
+
+## Architecture
 
 This project follows a modern, scalable architecture:
 
@@ -12,7 +16,7 @@ This project follows a modern, scalable architecture:
 - **ML Stack**: scikit-learn, pandas, numpy
 - **Visualization**: Plotly
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 reto-citibike/
@@ -35,7 +39,7 @@ reto-citibike-web/
 └── next.config.js         # Next.js configuration
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Backend (FastAPI)
 
@@ -83,7 +87,7 @@ pnpm dev
 # App will be available at http://localhost:3000
 ```
 
-## 🚢 Deployment
+## Deployment
 
 ### Backend to Google Cloud Run
 
@@ -99,7 +103,7 @@ cd reto-citibike-web
 vercel --prod
 ```
 
-## 📊 Features
+## Features
 
 ### Machine Learning
 
@@ -128,7 +132,7 @@ vercel --prod
 - `GET /api/anomalies/analysis` - Anomaly analysis results
 - `GET /api/counterfactual/analysis` - Counterfactual analysis
 
-## 🛠️ Development
+## Development
 
 ### Environment Variables
 
@@ -166,7 +170,7 @@ NEXT_PUBLIC_API_URL=https://your-cloud-run-url
 - `make logs` - View service logs
 - `make status` - Show service status
 
-## 🔧 Technology Stack
+## Technology Stack
 
 - **Backend**: FastAPI, uvicorn, pydantic
 - **ML/Data**: pandas, numpy, scikit-learn, plotly
@@ -175,7 +179,7 @@ NEXT_PUBLIC_API_URL=https://your-cloud-run-url
 - **Frontend**: Next.js, React, TypeScript, Tailwind CSS
 - **UI Components**: Radix UI, Lucide Icons
 
-## 📈 Model Performance
+## Model Performance
 
 The platform automatically evaluates multiple algorithms and selects the best performing model based on R² score:
 
@@ -184,7 +188,7 @@ The platform automatically evaluates multiple algorithms and selects the best pe
 - **Isolation Forest**: Anomaly detection
 - **Local Outlier Factor**: Local anomaly detection
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -192,6 +196,6 @@ The platform automatically evaluates multiple algorithms and selects the best pe
 4. Run tests
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
